@@ -1,3 +1,4 @@
+//! This module contains all docs and APIs related to users and user metadata.
 use crate::core::DbConnection;
 use crate::errors;
 use auth::Wrapper as Auth;
@@ -17,6 +18,40 @@ use http::StatusCode;
 use futures::TryStreamExt;
 use uuid::Uuid;
 
+/// # GET `/api/v1/user`
+/// Method returns metadata about the currently logged in user.
+///
+/// # Request
+/// This method takes in no additional parameters or data.
+///
+/// ## Authorization
+/// This method requires a valid authentication token.
+///
+/// ## Example
+/// ```text
+/// curl -X GET http://127.0.0.1:8000/api/v1/user -H "Authorization: ..."
+/// ```
+///
+/// # Response
+/// This method will return a JSON payload with the following schema:
+/// ```
+/// {
+///   "picture": Option<String>,
+///   "spentWatching": i64,
+///   "username": String,
+///   "roles": [String]
+/// }
+/// ```
+///
+/// ## Example
+/// ```
+/// {
+///   "picture": "/images/avatar.jpg",
+///   "spentWatching": 12,
+///   "username": "admin",
+///   "roles": ["owner"],
+/// }
+/// ```
 pub async fn whoami(user: Auth, conn: DbConnection) -> Result<impl warp::Reply, errors::DimError> {
     let username = user.0.claims.get_user();
     let mut tx = conn.read().begin().await?;
@@ -31,6 +66,34 @@ pub async fn whoami(user: Auth, conn: DbConnection) -> Result<impl warp::Reply, 
     })))
 }
 
+/// # POST `/api/v1/user/password`
+/// Method changes the password for a logged in account.
+///
+/// # Request
+/// This method accepts a JSON body with the following schema:
+/// ```
+/// {
+///   "old_password": String,
+///   "new_password": String,
+/// }
+/// ```
+/// The `old_password` field in the JSON payload must be the currently registered password for this
+/// user. The `new_password` field is the new password that we want to set.
+///
+/// ## Example
+/// ```text
+/// curl -X POST http://127.0.0.1:8000/api/v1/user/password -H "Content-type: application/json"
+/// -H "Authroization: ..." -d '{"old_password": "testPass", "new_password": "newTestPass"}'
+/// ```
+///
+/// # Response
+/// If the password is successfully changed, the method will simply return `200 0K`.
+///
+/// # Errors
+/// * [`InvalidCredentials`] - The provided `old_password` is incorrect or the authentication token
+/// is invalid.
+///
+/// [`InvalidCredentials`]: crate::errors::DimError::InvalidCredentials
 pub async fn change_password(
     conn: DbConnection,
     user: Auth,
@@ -49,6 +112,38 @@ pub async fn change_password(
     Ok(StatusCode::OK)
 }
 
+/// # DELETE `/api/v1/user`
+/// Method deletes the currently logged in account.
+///
+/// # Request
+/// This method accepts a JSON body with the following schema:
+/// ```
+/// {
+///   "password": String,
+/// }
+/// ```
+/// The `password` field in the JSON payload must be the currently registered password for this
+/// user. This is required as a safety mechanism to avoid accidental account deletion. 
+///
+/// ## Example
+/// ```text
+/// curl -X DELETE http://127.0.0.1:8000/api/v1/user -H "Content-type: application/json" -H "Authroization: ..."
+/// -d '{"password": "testPass"}'
+/// ```
+///
+/// # Response
+/// If the account is successfully deleted, the method will simply return `200 0K`.
+///
+/// # SAFETY and caveats
+/// Because Dim uses JWTs for authorization, deleting an account doesnt mean the authorization
+/// token is also revoked as JWTs are stateless by design. Because of this, users must ensure that
+/// the token is cleared from memory and is not *EVER* reused.
+///
+/// # Errors
+/// * [`InvalidCredentials`] - The provided `old_password` is incorrect or the authentication token
+/// is invalid.
+///
+/// [`InvalidCredentials`]: crate::errors::DimError::InvalidCredentials
 pub async fn delete(
     conn: DbConnection,
     user: Auth,
@@ -67,6 +162,30 @@ pub async fn delete(
     Ok(StatusCode::OK)
 }
 
+/// # POST `/api/v1/user/username`
+/// Method changes the username of the current account.
+///
+/// # Request
+/// This method accepts a JSON payload with the following schema:
+/// ```
+/// {
+///   "new_username": String
+/// }
+/// ```
+///
+/// ## Example
+/// ```text
+/// curl -X POST http://127.0.0.1:8000/api/v1/user/username -H "Content-type: application/json" -H
+/// "Authorization: ..." -d '{"new_username": "testUsername"}'
+/// ```
+///
+/// # Response
+/// If the username is successfully changed this method will simply return `200 OK`.
+///
+/// # Errors
+/// * [`UsernameNotAvailable`] - THe provided username has already been claimed by another user.
+///
+/// [`UsernameNotAvailable`]: crate::errors::DimError::UsernameNotAvailable
 pub async fn change_username(
     conn: DbConnection,
     user: Auth,
@@ -84,6 +203,28 @@ pub async fn change_username(
     Ok(StatusCode::OK)
 }
 
+/// # POST `/api/v1/user/avatar`
+/// This method can be used to set a new avatar for a user.
+///
+/// # Request
+/// This method accepts a multipart file upload. Only `jpg` and `png` files are supported.
+///
+/// ## Example
+/// ```text
+/// curl -X POST http://127.0.0.1:8000/api/v1/user/avatar -H "Authorization: ..." --form
+/// file='@newAvatar.png'
+/// ```
+///
+/// # Response
+/// If the avatar is successfully uploaded, this route will return `200 OK`.
+///
+/// # Errors
+/// * [`UploadFailed`] - No file has been uploaded correctly or the `file` form field has not been
+/// * [`UnsupportedFile`] - The file uploaded is not supported.
+/// found.
+///
+/// [`UploadFailed`]: crate::errors::DimError::UploadFailed
+/// [`UnsupportedFile`]: crate::errors::DimError::UnsupportedFile
 pub async fn upload_avatar(
     conn: DbConnection,
     user: Auth,
@@ -108,6 +249,7 @@ pub async fn upload_avatar(
     Ok(StatusCode::OK)
 }
 
+#[doc(hidden)]
 pub async fn process_part(
     conn: &mut database::Transaction<'_>,
     p: warp::multipart::Part,
@@ -116,7 +258,7 @@ pub async fn process_part(
         return Err(errors::DimError::UploadFailed);
     }
 
-    let file_ext = match dbg!(p.content_type()) {
+    let file_ext = match p.content_type() {
         Some("image/jpeg" | "image/jpg") => "jpg",
         Some("image/png") => "png",
         _ => return Err(errors::DimError::UnsupportedFile),
@@ -164,7 +306,7 @@ pub(crate) mod filters {
     pub fn whoami(
         conn: DbConnection,
     ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
-        warp::path!("api" / "v1" / "auth" / "whoami")
+        warp::path!("api" / "v1" / "user")
             .and(warp::get())
             .and(auth::with_auth())
             .and(with_state(conn))
