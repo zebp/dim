@@ -38,8 +38,8 @@ ARG TARGETARCH=amd64
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
     apt-get update && \
     apt-get install -y wget unzip && \
-    wget https://nightly.link/Dusk-Labs/ffmpeg-static/workflows/main/master/bins.zip && \
-    unzip bins.zip \
+    wget https://github.com/Dusk-Labs/ffmpeg-static/releases/download/ffmpeg-all-0.0.1/ffmpeg && \
+    wget https://github.com/Dusk-Labs/ffmpeg-static/releases/download/ffmpeg-all-0.0.1/ffmpeg \
     ; fi
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
     apt-get update && \
