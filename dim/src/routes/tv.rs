@@ -89,7 +89,7 @@ pub mod filters {
             .and_then(|id: i64, auth: Auth, conn: DbConnection| async move {
                 super::get_season_episodes(conn, id, auth)
                     .await
-                        .map_err(reject::custom)
+                    .map_err(reject::custom)
             })
     }
 

@@ -1,6 +1,7 @@
 use crate::core::DbConnection;
 use crate::errors;
 use crate::json;
+use crate::scanners::ApiMedia;
 
 use auth::Wrapper as Auth;
 
@@ -321,7 +322,7 @@ pub async fn get_media_by_id(
             } else {
                 None
             }
-        },
+        }
         Err(_) => None,
     };
 
@@ -423,16 +424,12 @@ pub async fn tmdb_search(
     };
 
     let mut tmdb_session = Tmdb::new("38c372f5bc572c8aadde7a802638534e".to_string(), media_type);
+    let results = tmdb_session
+        .search_by_name(query, year, None)
+        .await
+        .map_err(|_| errors::DimError::NotFoundError)?;
 
-    Ok(reply::json(
-        &tmdb_session
-            .search_by_name(query, year, None)
-            .await
-            .map_err(|_| errors::DimError::NotFoundError)?
-            .into_iter()
-            .map(Into::<crate::scanners::ApiMedia>::into)
-            .collect::<Vec<_>>(),
-    ))
+    Ok(ApiMedia::search_response(results.into_iter()))
 }
 
 /// Method mapped to `POST /api/v1/media/<id>/progress` is used to map progress for a certain media

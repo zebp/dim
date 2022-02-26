@@ -291,9 +291,7 @@ pub async fn register(
         // NOTE: Double check what we are returning here.
         Login::new_invite(&mut tx).await?
     } else {
-        new_user
-            .invite_token
-            .ok_or(errors::DimError::NoToken)?
+        new_user.invite_token.ok_or(errors::DimError::NoToken)?
     };
 
     let res = InsertableUser {
