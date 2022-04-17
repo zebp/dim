@@ -7,6 +7,7 @@ import {
   UPDATE_VIDEO,
   CLEAR_VIDEO_DATA,
   SET_SHOW_SETTINGS,
+  SET_VIDEO_ERROR,
 } from "./types";
 
 export const setGID = (gid) => async (dispatch) => {
@@ -76,4 +77,8 @@ export const incIdleCount = () => async (dispatch, getState) => {
 
 export const clearVideoData = () => async (dispatch) => {
   dispatch({ type: CLEAR_VIDEO_DATA });
+};
+
+export const setVideoError = (error) => (dispatch) => {
+  dispatch({ type: SET_VIDEO_ERROR, error });
 };

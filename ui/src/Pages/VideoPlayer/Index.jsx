@@ -12,6 +12,7 @@ import {
   updateVideo,
   incIdleCount,
   clearVideoData,
+  setVideoError,
 } from "../../actions/video";
 import { fetchUserSettings } from "../../actions/settings.js";
 import { useGetMediaFilesQuery, useGetMediaQuery } from "../../api/v1/media";
@@ -119,6 +120,19 @@ function VideoPlayer() {
 
       const res = await fetch(host, config);
       const payload = await res.json();
+
+      if (res.status !== 200) {
+        const err = payload?.error ?? payload?.message;
+
+        dispatch(
+          setVideoError({
+            errors: [err],
+          })
+        );
+        return;
+      }
+
+      console.log(payload);
 
       dispatch(setGID(payload.gid));
 

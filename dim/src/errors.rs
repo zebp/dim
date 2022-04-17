@@ -51,7 +51,9 @@ pub enum DimError {
 
 impl From<sqlx::Error> for DimError {
     fn from(e: sqlx::Error) -> Self {
-        Self::DatabaseError { description: format!("{:?}", e) }
+        Self::DatabaseError {
+            description: format!("{:?}", e),
+        }
     }
 }
 
@@ -80,7 +82,7 @@ impl warp::Reply for DimError {
 
         let resp = json!({
             "error": json!(&self)["error"],
-            "messsage": self.to_string(),
+            "message": self.to_string(),
         });
 
         warp::http::Response::builder()
@@ -135,7 +137,7 @@ impl warp::Reply for StreamingErrors {
 
         let resp = json!({
             "error": json!(&self)["error"],
-            "messsage": self.to_string(),
+            "message": self.to_string(),
         });
 
         warp::http::Response::builder()

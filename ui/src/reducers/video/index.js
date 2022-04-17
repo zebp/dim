@@ -7,6 +7,7 @@ import {
   UPDATE_VIDEO,
   CLEAR_VIDEO_DATA,
   SET_SHOW_SETTINGS,
+  SET_VIDEO_ERROR,
 } from "../../actions/types";
 
 import trackReducer from "./track";
@@ -114,6 +115,11 @@ export default function videoReducer(state = initialState, action) {
       };
     case CLEAR_VIDEO_DATA:
       return initialState;
+    case SET_VIDEO_ERROR:
+      return {
+        ...state,
+        error: action.error,
+      };
     default:
       return state;
   }
