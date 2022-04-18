@@ -42,6 +42,7 @@ const ModalBox = (props: Props) => {
         onRequestClose={close}
         overlayClassName="popupOverlay"
       >
+        {/* @ts-ignore */}
         {props.children(close)}
       </Modal>
     </div>
